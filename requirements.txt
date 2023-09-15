@@ -1,0 +1,10 @@
+numpy
+scipy
+matplotlib
+fairseq2
+AMFM-decompy
+webrtcvad
+librosa
+soundfile
+wavfile
+tqdm
