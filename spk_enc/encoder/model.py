@@ -24,8 +24,8 @@ class SpeakerEncoder(nn.Module):
         self.relu = torch.nn.ReLU().to(device)
         
         # Cosine similarity scaling (with fixed initial parameter values)
-        self.similarity_weight = nn.Parameter(torch.tensor([10.])).to(loss_device)
-        self.similarity_bias = nn.Parameter(torch.tensor([-5.])).to(loss_device)
+        self.similarity_weight = nn.Parameter(torch.tensor([10.]).to(loss_device)) 
+        self.similarity_bias = nn.Parameter(torch.tensor([-5.]).to(loss_device))
 
         # Loss
         self.loss_fn = nn.CrossEntropyLoss().to(loss_device)

@@ -4,7 +4,10 @@ matplotlib
 fairseq2
 AMFM-decompy
 webrtcvad
-librosa
+librosa==0.10.1
 soundfile
 wavfile
 tqdm
+umap-learn==0.5.2
+visdom
+local-attention

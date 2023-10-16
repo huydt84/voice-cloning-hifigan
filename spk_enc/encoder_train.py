@@ -26,7 +26,7 @@ if __name__ == "__main__":
     parser.add_argument("-u", "--umap_every", type=int, default=100, help= \
         "Number of steps between updates of the umap projection. Set to 0 to never update the "
         "projections.")
-    parser.add_argument("-s", "--save_every", type=int, default=500, help= \
+    parser.add_argument("-s", "--save_every", type=int, default=100, help= \
         "Number of steps between updates of the model on the disk. Set to 0 to never save the "
         "model.")
     parser.add_argument("-b", "--backup_every", type=int, default=7500, help= \

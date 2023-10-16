@@ -3,9 +3,10 @@ from pathlib import Path
 import torch
 
 from encoder.data_objects import SpeakerVerificationDataLoader, SpeakerVerificationDataset
-from encoder.model import SpeakerEncoder
+from encoder.model_ecapa_localmha import SpeakerEncoder
 from encoder.params_model import *
 from encoder.visualizations import Visualizations
+from torch.nn.modules import adaptive
 from utils.profiler import Profiler
 
 
@@ -24,7 +25,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         dataset,
         speakers_per_batch,
         utterances_per_speaker,
-        num_workers=4,
+        num_workers=2,
     )
 
     # Setup the device on which to run the forward pass and the loss. These can be different,
@@ -32,7 +33,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
     # hyperparameters) faster on the CPU.
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     # FIXME: currently, the gradient is None if loss_device is cuda
-    loss_device = torch.device("cpu")
+    loss_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create the model and the optimizer
     model = SpeakerEncoder(device, loss_device)
@@ -94,6 +95,7 @@ def train(run_id: str, clean_data_root: Path, models_dir: Path, umap_every: int,
         # Update visualizations
         # learning_rate = optimizer.param_groups[0]["lr"]
         vis.update(loss.item(), eer, step)
+        print(f"Loss: {loss.item()}, step: {step}")
 
         # Draw projections and save them to the backup folder
         if umap_every != 0 and step % umap_every == 0:

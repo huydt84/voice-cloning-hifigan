@@ -24,7 +24,7 @@ if __name__ == "__main__":
                     "    -dev",
         formatter_class=MyFormatter
     )
-    parser.add_argument("datasets_root", type=Path, help=\
+    parser.add_argument("--datasets_root", type=Path, help=\
         "Path to the directory containing your LibriSpeech/TTS and VoxCeleb datasets.")
     parser.add_argument("-o", "--out_dir", type=Path, default=argparse.SUPPRESS, help=\
         "Path to the output directory that will contain the mel spectrograms. If left out, "
