@@ -1,5 +1,5 @@
 from encoder.params_data import *
-from encoder.model import SpeakerEncoder
+from encoder.model_ecapa_tdnn import SpeakerEncoder
 from encoder.audio import preprocess_wav   # We want to expose this function from here
 from matplotlib import cm
 from encoder import audio
