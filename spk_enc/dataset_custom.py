@@ -8,6 +8,8 @@
 
 import random
 from pathlib import Path
+import math
+import os
 
 import amfm_decompy.basic_tools as basic
 import amfm_decompy.pYAAPT as pYAAPT
@@ -15,11 +17,19 @@ import numpy as np
 import soundfile as sf
 import torch
 import torch.utils.data
-import torch.utils.data
+from torch.utils.data import random_split
 from librosa.filters import mel as librosa_mel_fn
 from librosa.util import normalize
 
+from scipy.io.wavfile import read
+import json
+from typing import List
+
 MAX_WAV_VALUE = 32768.0
+
+def load_wav(full_path):
+    sampling_rate, data = read(full_path)
+    return data, sampling_rate
 
 
 def get_yaapt_f0(audio, rate=16000, interp=False):
@@ -129,11 +139,13 @@ def parse_manifest(manifest):
     return audio_files, codes
 
 
-def get_dataset_filelist(h):
-    training_files, training_codes = parse_manifest(h.input_training_file)
-    validation_files, validation_codes = parse_manifest(h.input_validation_file)
-
-    return (training_files, training_codes), (validation_files, validation_codes)
+def get_dataset_filelist(metadata_path: str):
+    with open(metadata_path, "r") as f:
+        metadata = f.readlines()
+    generator = torch.Generator().manual_seed(42)
+    train_dataset, val_dataset = random_split(metadata, [0.95, 0.05], generator=generator)
+    return (train_dataset, val_dataset)   
+        
 
 
 def parse_speaker(path, method):
@@ -155,15 +167,14 @@ def parse_speaker(path, method):
 
 
 class CustomCodeDataset(torch.utils.data.Dataset):
-    def __init__(self, training_files, segment_size, code_hop_size, n_fft, num_mels,
-                 hop_size, win_size, sampling_rate, fmin, fmax, split=True, n_cache_reuse=1,
-                 device=None, fmax_loss=None, f0=None, multispkr=False, pad=None,
-                 f0_stats=None, f0_normalize=False, f0_feats=False, f0_median=False,
-                 f0_interp=False, vqvae=False):
-        self.audio_files, self.codes = training_files
+    def __init__(self, training_files, segment_size, n_fft, num_mels,
+                 hop_size, win_size, sampling_rate,  fmin, fmax, split=True, shuffle=True, n_cache_reuse=1,
+                 device=None, fmax_loss=None, fine_tuning=False, base_mels_path=None):
+        self.data = training_files
         random.seed(1234)
+        if shuffle:
+            random.shuffle(self.data)
         self.segment_size = segment_size
-        self.code_hop_size = code_hop_size
         self.sampling_rate = sampling_rate
         self.split = split
         self.n_fft = n_fft
@@ -177,140 +188,51 @@ class CustomCodeDataset(torch.utils.data.Dataset):
         self.n_cache_reuse = n_cache_reuse
         self._cache_ref_count = 0
         self.device = device
-        self.vqvae = vqvae
-        self.f0 = f0
-        self.f0_normalize = f0_normalize
-        self.f0_feats = f0_feats
-        self.f0_stats = None
-        self.f0_interp = f0_interp
-        self.f0_median = f0_median
-        if f0_stats:
-            self.f0_stats = torch.load(f0_stats)
-        self.multispkr = multispkr
-        self.pad = pad
-        if self.multispkr:
-            spkrs = [parse_speaker(f, self.multispkr) for f in self.audio_files]
-            spkrs = list(set(spkrs))
-            spkrs.sort()
+        self.fine_tuning = fine_tuning
+        self.base_mels_path = base_mels_path
 
-            self.id_to_spkr = spkrs
-            self.spkr_to_id = {k: v for v, k in enumerate(self.id_to_spkr)}
+    def __iter__(self):
+        for data in self.data:
+            # Audio simple preprocess
+            filename = data["audio"]
+            if self._cache_ref_count == 0:
+                audio, sampling_rate = load_audio(filename)
+                if sampling_rate != self.sampling_rate:
+                    # raise ValueError("{} SR doesn't match target {} SR".format(
+                    #     sampling_rate, self.sampling_rate))
+                    import resampy
+                    audio = resampy.resample(audio, sampling_rate, self.sampling_rate)
 
-    def _sample_interval(self, seqs, seq_len=None):
-        N = max([v.shape[-1] for v in seqs])
-        if seq_len is None:
-            seq_len = self.segment_size if self.segment_size > 0 else N
-
-        hops = [N // v.shape[-1] for v in seqs]
-        lcm = np.lcm.reduce(hops)
-
-        # Randomly pickup with the batch_max_steps length of the part
-        interval_start = 0
-        interval_end = N // lcm - seq_len // lcm
-
-        start_step = random.randint(interval_start, interval_end)
-
-        new_seqs = []
-        for i, v in enumerate(seqs):
-            start = start_step * (lcm // hops[i])
-            end = (start_step + seq_len // lcm) * (lcm // hops[i])
-            new_seqs += [v[..., start:end]]
-
-        return new_seqs
-
-    def __getitem__(self, index):
-        filename = self.audio_files[index]
-        if self._cache_ref_count == 0:
-            audio, sampling_rate = load_audio(filename)
-            if sampling_rate != self.sampling_rate:
-                # raise ValueError("{} SR doesn't match target {} SR".format(
-                #     sampling_rate, self.sampling_rate))
-                import resampy
-                audio = resampy.resample(audio, sampling_rate, self.sampling_rate)
-
-            if self.pad:
-                padding = self.pad - (audio.shape[-1] % self.pad)
-                audio = np.pad(audio, (0, padding), "constant", constant_values=0)
-            audio = audio / MAX_WAV_VALUE
-            audio = normalize(audio) * 0.95
-            self.cached_wav = audio
-            self._cache_ref_count = self.n_cache_reuse
-        else:
-            audio = self.cached_wav
-            self._cache_ref_count -= 1
-
-        # Trim audio ending
-        if self.vqvae:
-            code_length = audio.shape[0] // self.code_hop_size
-        else:
-            code_length = min(audio.shape[0] // self.code_hop_size, self.codes[index].shape[0])
-            code = self.codes[index][:code_length]
-        audio = audio[:code_length * self.code_hop_size]
-        assert self.vqvae or audio.shape[0] // self.code_hop_size == code.shape[0], "Code audio mismatch"
-
-        while audio.shape[0] < self.segment_size:
-            audio = np.hstack([audio, audio])
-            if not self.vqvae:
-                code = np.hstack([code, code])
-
-        audio = torch.FloatTensor(audio)
-        audio = audio.unsqueeze(0)
-
-        assert audio.size(1) >= self.segment_size, "Padding not supported!!"
-        if self.vqvae:
-            audio = self._sample_interval([audio])[0]
-        else:
-            audio, code = self._sample_interval([audio, code])
-
-        mel_loss = mel_spectrogram(audio, self.n_fft, self.num_mels,
-                                   self.sampling_rate, self.hop_size, self.win_size, self.fmin, self.fmax_loss,
-                                   center=False)
-
-        if self.vqvae:
-            feats = {
-                "code": audio.view(1, -1).numpy()
-            }
-        else:
-            feats = {"code": code.squeeze()}
-
-        if self.f0:
-            try:
-                f0 = get_yaapt_f0(audio.numpy(), rate=self.sampling_rate, interp=self.f0_interp)
-            except:
-                f0 = np.zeros((1, 1, audio.shape[-1] // 80))
-            f0 = f0.astype(np.float32)
-            feats['f0'] = f0.squeeze(0)
-
-        if self.multispkr:
-            feats['spkr'] = self._get_spkr(index)
-
-        if self.f0_normalize:
-            spkr_id = self._get_spkr(index).item()
-
-            if spkr_id not in self.f0_stats:
-                mean = self.f0_stats['f0_mean']
-                std = self.f0_stats['f0_std']
+                if self.pad:
+                    padding = self.pad - (audio.shape[-1] % self.pad)
+                    audio = np.pad(audio, (0, padding), "constant", constant_values=0)
+                audio = audio / MAX_WAV_VALUE
+                audio = normalize(audio) * 0.95
+                self.cached_wav = audio
+                self._cache_ref_count = self.n_cache_reuse
             else:
-                mean = self.f0_stats[spkr_id]['f0_mean']
-                std = self.f0_stats[spkr_id]['f0_std']
-            ii = feats['f0'] != 0
+                audio = self.cached_wav
+                self._cache_ref_count -= 1
 
-            if self.f0_median:
-                med = np.median(feats['f0'][ii])
-                feats['f0'][~ii] = med
-                feats['f0'][~ii] = (feats['f0'][~ii] - mean) / std
+            audio = torch.FloatTensor(audio)
+            audio = audio.unsqueeze(0)
 
-            feats['f0'][ii] = (feats['f0'][ii] - mean) / std
-
-            if self.f0_feats:
-                feats['f0_stats'] = torch.FloatTensor([mean, std]).view(-1).numpy()
-
-        return feats, audio.squeeze(0), str(filename), mel_loss.squeeze()
-
-    def _get_spkr(self, idx):
-        spkr_name = parse_speaker(self.audio_files[idx], self.multispkr)
-        spkr_id = torch.LongTensor([self.spkr_to_id[spkr_name]]).view(1).numpy()
-        return spkr_id
-
-    def __len__(self):
-        return len(self.audio_files)
+            mel_loss = mel_spectrogram(audio, self.n_fft, self.num_mels,
+                                    self.sampling_rate, self.hop_size, self.win_size, self.fmin, self.fmax_loss,
+                                    center=False)
+            
+            # Unit loading from file
+            unit = np.array(data["unit"])
+            feats = {
+                "code": unit.squeeze()
+            }
+            
+            # Language loading from file
+            feats["lang"] = data["lang"]
+            
+            # Speaker embedding path loading from file
+            embed_path = data["embed"]
+            embedding = np.load(embed_path, allow_pickle=True)
+            feats["spkr"] = np.array(embedding).squeeze()
+            
+            yield (feats, audio.squeeze(0), filename, mel_loss.squeeze())
