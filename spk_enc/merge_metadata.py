@@ -152,7 +152,7 @@ class Data:
     unit: List[int]
     speaker: str
     nationality: str
-    embeded: str
+    embed: str
     language: str
     
 def whisper2vocoder(lang_whisper: str):

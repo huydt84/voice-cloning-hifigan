@@ -139,7 +139,7 @@ def parse_manifest(manifest):
     return audio_files, codes
 
 
-def get_dataset_filelist(metadata_path: str):
+def get_dataset_list(metadata_path: str):
     with open(metadata_path, "r") as f:
         metadata = f.readlines()
     generator = torch.Generator().manual_seed(42)
@@ -228,7 +228,7 @@ class CustomCodeDataset(torch.utils.data.Dataset):
             }
             
             # Language loading from file
-            feats["lang"] = data["lang"]
+            feats["language"] = data["language"]
             
             # Speaker embedding path loading from file
             embed_path = data["embed"]

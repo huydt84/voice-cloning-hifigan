@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 from fairseq2.models.utils.arch_registry import ArchitectureRegistry
 from fairseq2.typing import DataType, Device
 
-from vocoder.codehifigan import CodeGenerator
+from vocoder.codehifigan import CodeGenerator, CustomCodeGenerator
 from vocoder.vocoder import Vocoder
 
 
@@ -98,7 +98,7 @@ class VocoderBuilder:
     def build_model(self) -> Vocoder:
         """Build a model."""
 
-        code_generator = CodeGenerator(
+        code_generator = CustomCodeGenerator(
             self.config.upsample_rates,
             self.config.upsample_kernel_sizes,
             self.config.upsample_initial_channel,

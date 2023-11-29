@@ -314,8 +314,8 @@ class CodeDataset(torch.utils.data.Dataset):
 
     def __len__(self):
         return len(self.audio_files)
-    
-    
+
+
 class F0Dataset(torch.utils.data.Dataset):
     def __init__(self, training_files, segment_size, sampling_rate,
                  split=True, n_cache_reuse=1, device=None, multispkr=False,

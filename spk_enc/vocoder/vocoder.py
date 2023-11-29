@@ -23,7 +23,7 @@ class Vocoder(nn.Module):
         self,
         code: List[int],
         lang: str,
-        spkr: Union[Optional[int], torch.tensor],
+        spkr,
         dur_prediction: bool = True,
     ) -> Tensor:
         x = {
