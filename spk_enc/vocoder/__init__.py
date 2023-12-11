@@ -17,3 +17,4 @@ from vocoder.loader import (
     load_vocoder_model as load_vocoder_model,
 )
 from vocoder.vocoder import Vocoder as Vocoder
+from vocoder.vocoder import init_vocoder as init_vocoder 

@@ -24,37 +24,15 @@ from torch.distributed import init_process_group
 from torch.nn.parallel import DistributedDataParallel
 from dataset import CodeDataset, mel_spectrogram, get_dataset_filelist
 from dataset_custom import get_dataset_list, CustomCodeDataset
-from vocoder import load_vocoder_model, Vocoder
+from vocoder import load_vocoder_model, Vocoder, init_vocoder
 from models import MultiPeriodDiscriminator, MultiScaleDiscriminator, feature_loss, generator_loss, \
     discriminator_loss
-from utils import plot_spectrogram, scan_checkpoint, load_checkpoint, \
+from utils_train import plot_spectrogram, scan_checkpoint, load_checkpoint, \
     save_checkpoint, build_env, AttrDict
     
 from typing import Callable, Dict, List, Optional, Tuple, Union
-from fairseq2.assets.card import AssetCard
-from fairseq2.typing import DataType, Device
 
 torch.backends.cudnn.benchmark = True
-
-def load_model_for_train(
-        load_model_fn: Callable[..., nn.Module],
-        model_name_or_card: Union[str, AssetCard],
-        device: Device,
-        dtype: DataType,
-    ) -> nn.Module:
-        model = load_model_fn(model_name_or_card, device=device, dtype=dtype)
-        model.train()
-        return model
-
-def load_model_for_inference(
-        load_model_fn: Callable[..., nn.Module],
-        model_name_or_card: Union[str, AssetCard],
-        device: Device,
-        dtype: DataType,
-    ) -> nn.Module:
-        model = load_model_fn(model_name_or_card, device=device, dtype=dtype)
-        model.eval()
-        return model
 
 def train(rank, local_rank, a, h):
     if h.num_gpus > 1:
@@ -68,7 +46,8 @@ def train(rank, local_rank, a, h):
     torch.cuda.manual_seed(h.seed)
     device = torch.device('cuda:{:d}'.format(local_rank))
 
-    generator: Vocoder = load_model_for_train(load_vocoder_model, "vocoder_36langs.yaml", device, torch.float32)
+    # generator: Vocoder = load_model_for_train(load_vocoder_model, "vocoder_36langs.yaml", device, torch.float32)
+    generator = init_vocoder(a.model_config)
     mpd = MultiPeriodDiscriminator().to(device)
     msd = MultiScaleDiscriminator().to(device)
 
@@ -231,7 +210,7 @@ def train(rank, local_rank, a, h):
                 if steps % a.checkpoint_interval == 0 and steps != 0:
                     checkpoint_path = "{}/g_{:08d}".format(a.checkpoint_path, steps)
                     save_checkpoint(checkpoint_path,
-                                    {'generator': (generator.module if h.num_gpus > 1 else generator).state_dict()})
+                                    {'generator': (generator.module.code_generator if h.num_gpus > 1 else generator.code_generator).state_dict()})
                     checkpoint_path = "{}/do_{:08d}".format(a.checkpoint_path, steps)
                     save_checkpoint(checkpoint_path, {'mpd': (mpd.module if h.num_gpus > 1 else mpd).state_dict(),
                                                       'msd': (msd.module if h.num_gpus > 1 else msd).state_dict(),
@@ -319,7 +298,8 @@ def main():
 
     parser.add_argument('--group_name', default=None)
     parser.add_argument('--checkpoint_path', default='cp_hifigan')
-    parser.add_argument('--config', default='')
+    parser.add_argument('--config', default='vocoder/train_config.json')
+    parser.add_argument('--model_config', default='vocoder/model_config.json')
     parser.add_argument('--training_epochs', default=2000, type=int)
     parser.add_argument('--training_steps', default=400000, type=int)
     parser.add_argument('--stdout_interval', default=5, type=int)
