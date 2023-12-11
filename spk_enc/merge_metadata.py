@@ -170,8 +170,8 @@ def merge(manifest_path, audio_embed_path, audio2lang_path):
     with open(audio2lang_path, "r") as f:
         audio2lang = f.readlines()
         
-    assert len(manifest) != len(audio_embed), f"Length of {manifest_path} ({len(manifest)}) != length of {audio_embed_path} ({len(audio_embed)})"
-    assert len(manifest) != len(audio2lang), f"Length of {manifest_path} ({len(manifest)}) != length of {audio2lang_path} ({len(audio2lang)})"
+    assert len(manifest) == len(audio_embed), f"Length of {manifest_path} ({len(manifest)}) != length of {audio_embed_path} ({len(audio_embed)})"
+    assert len(manifest) == len(audio2lang), f"Length of {manifest_path} ({len(manifest)}) != length of {audio2lang_path} ({len(audio2lang)})"
         
     countNone = 0
     for i in range(len(manifest)):
@@ -186,8 +186,8 @@ def merge(manifest_path, audio_embed_path, audio2lang_path):
         audio2lang_line = audio2lang[i]
         audio2lang_json = json.loads(audio2lang_line)
         
-        assert manifest_json["audio"] != audio_embed["audio"], f"Audio in manifest != audio_embed at line {i+1}"
-        assert manifest_json["audio"] != audio2lang["audio"], f"Audio in manifest != audio2lang at line {i+1}"
+        assert manifest_json["audio"] == audio_embed_json["audio"], f"Audio in manifest != audio_embed at line {i+1}"
+        assert manifest_json["audio"] == audio2lang_json["audio"], f"Audio in manifest != audio2lang at line {i+1}"
         
         if whisper2vocoder(audio2lang_json["language"]) is None:
             countNone += 1

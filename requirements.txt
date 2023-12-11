@@ -2,7 +2,7 @@ torch
 numpy
 scipy
 matplotlib
-fairseq2
+fairseq2==0.1.0
 AMFM-decompy
 webrtcvad
 librosa==0.10.1
