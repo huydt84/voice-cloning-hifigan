@@ -168,7 +168,7 @@ def parse_speaker(path, method):
 
 class CustomCodeDataset(torch.utils.data.IterableDataset):
     def __init__(self, training_files, segment_size, n_fft, num_mels,
-                 hop_size, win_size, sampling_rate,  fmin, fmax, pad=True, split=True, shuffle=True, n_cache_reuse=1,
+                 hop_size, win_size, sampling_rate,  fmin, fmax, pad=None, split=True, shuffle=True, n_cache_reuse=1,
                  device=None, fmax_loss=None, fine_tuning=False, base_mels_path=None):
         super(CustomCodeDataset).__init__()
         self.data = training_files
@@ -189,6 +189,28 @@ class CustomCodeDataset(torch.utils.data.IterableDataset):
         self.device = device
         self.fine_tuning = fine_tuning
         self.base_mels_path = base_mels_path
+
+    def _sample_interval(self, seqs, seq_len=None):
+        N = max([v.shape[-1] for v in seqs])
+        if seq_len is None:
+            seq_len = self.segment_size if self.segment_size > 0 else N
+
+        hops = [N // v.shape[-1] for v in seqs]
+        lcm = np.lcm.reduce(hops)
+
+        # Randomly pickup with the batch_max_steps length of the part
+        interval_start = 0
+        interval_end = N // lcm - seq_len // lcm
+
+        start_step = random.randint(interval_start, interval_end)
+
+        new_seqs = []
+        for i, v in enumerate(seqs):
+            start = start_step * (lcm // hops[i])
+            end = (start_step + seq_len // lcm) * (lcm // hops[i])
+            new_seqs += [v[..., start:end]]
+
+        return new_seqs
         
     def __len__(self):
         return len(self.data)
@@ -220,12 +242,19 @@ class CustomCodeDataset(torch.utils.data.IterableDataset):
             audio = torch.FloatTensor(audio)
             audio = audio.unsqueeze(0)
 
+            assert audio.size(1) >= self.segment_size, "Padding not supported!!"
+            
             mel_loss = mel_spectrogram(audio, self.n_fft, self.num_mels,
                                     self.sampling_rate, self.hop_size, self.win_size, self.fmin, self.fmax_loss,
                                     center=False)
             
             # Unit loading from file
             unit = np.array(data["unit"])
+            print(audio.shape)
+            print(len(unit))
+            audio, unit = self._sample_interval([audio, unit])
+            print(audio.shape)
+            print(len(unit))
             feats = {
                 "code": unit.squeeze()
             }
