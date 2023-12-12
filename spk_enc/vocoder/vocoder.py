@@ -43,7 +43,7 @@ class Vocoder(nn.Module):
         x["lang"] = torch.tensor([[lang_idx]])
         return self.code_generator(x, dur_prediction)
 
-LANGUAGE_CODE: {
+LANGUAGE_CODE = {
     "arb": 0,
     "ben": 1,
     "cat": 2,

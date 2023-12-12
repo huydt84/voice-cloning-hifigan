@@ -171,9 +171,6 @@ class CustomCodeDataset(torch.utils.data.Dataset):
                  hop_size, win_size, sampling_rate,  fmin, fmax, split=True, shuffle=True, n_cache_reuse=1,
                  device=None, fmax_loss=None, fine_tuning=False, base_mels_path=None):
         self.data = training_files
-        random.seed(1234)
-        if shuffle:
-            random.shuffle(self.data)
         self.segment_size = segment_size
         self.sampling_rate = sampling_rate
         self.split = split

@@ -11,7 +11,7 @@ from torch import Tensor
 from torch.nn import Dropout
 
 from vocoder.hifigan import Generator
-from spk_enc.encoder.params_model import model_embedding_size as spkr_embedding_dim
+from encoder.params_model import model_embedding_size as spkr_embedding_dim
 
 
 class VariancePredictor(nn.Module):
