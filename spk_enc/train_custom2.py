@@ -85,13 +85,12 @@ def train(a, h):
     #                        vqvae=h.get('code_vq_params', False))
     
     training_list, validation_list = get_dataset_list(h.training_metadata)
+    print(training_list[0])
     trainset = CustomCodeDataset(training_list, h.segment_size, h.n_fft, h.num_mels, h.hop_size,
                            h.win_size, h.sampling_rate, h.fmin, h.fmax, n_cache_reuse=0, 
                            fmax_loss=h.fmax_for_loss, device=device)
 
-    train_sampler = DistributedSampler(trainset) if h.num_gpus > 1 else None
-
-    train_loader = DataLoader(trainset, num_workers=0, shuffle=False, sampler=train_sampler,
+    train_loader = DataLoader(trainset, num_workers=0, shuffle=False,
                               batch_size=h.batch_size, pin_memory=True, drop_last=True)
 
     validset = CustomCodeDataset(validation_list, h.segment_size, h.n_fft, h.num_mels, h.hop_size,
@@ -109,10 +108,8 @@ def train(a, h):
         start = time.time()
         print("Epoch: {}".format(epoch + 1))
 
-        if h.num_gpus > 1:
-            train_sampler.set_epoch(epoch)
-
         for i, batch in enumerate(train_loader):
+            print(i)
             start_b = time.time()
             
             x, y, _, y_mel = batch

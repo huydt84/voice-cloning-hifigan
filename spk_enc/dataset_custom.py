@@ -170,6 +170,7 @@ class CustomCodeDataset(torch.utils.data.Dataset):
     def __init__(self, training_files, segment_size, n_fft, num_mels,
                  hop_size, win_size, sampling_rate,  fmin, fmax, split=True, shuffle=True, n_cache_reuse=1,
                  device=None, fmax_loss=None, fine_tuning=False, base_mels_path=None):
+        super(CustomCodeDataset).__init__()
         self.data = training_files
         self.segment_size = segment_size
         self.sampling_rate = sampling_rate
