@@ -38,7 +38,8 @@ def train(a, h):
     device = torch.device('cuda:0')
 
     # generator: Vocoder = load_model_for_train(load_vocoder_model, "vocoder_36langs.yaml", device, torch.float32)
-    generator: Vocoder = init_vocoder(a.model_config).to(device)
+    vocoder: Vocoder = init_vocoder(a.model_config).to(device)
+    generator = vocoder.code_generator
     mpd = MultiPeriodDiscriminator().to(device)
     msd = MultiScaleDiscriminator().to(device)
 
@@ -57,7 +58,7 @@ def train(a, h):
     else:
         state_dict_g = load_checkpoint(cp_g, device)
         state_dict_do = load_checkpoint(cp_do, device)
-        generator.code_generator.load_state_dict(state_dict_g['generator'])
+        generator.load_state_dict(state_dict_g['generator'])
         mpd.load_state_dict(state_dict_do['mpd'])
         msd.load_state_dict(state_dict_do['msd'])
         steps = state_dict_do['steps'] + 1
@@ -119,7 +120,7 @@ def train(a, h):
             x = {k: torch.autograd.Variable(v.to(device, non_blocking=False)) for k, v in x.items()}
             # x["code"] = torch.Tensor(x["code"])
 
-            y_g_hat = generator(code=x["code"], lang=x["language"], spkr=x["spkr"])
+            y_g_hat = generator(**x)
             if h.get('f0_vq_params', None) or h.get('code_vq_params', None):
                 y_g_hat, commit_losses, metrics = y_g_hat
 
