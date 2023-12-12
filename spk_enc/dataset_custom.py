@@ -59,7 +59,7 @@ def mel_spectrogram(y, n_fft, num_mels, sampling_rate, hop_size, win_size, fmin,
 
     global mel_basis, hann_window
     if fmax not in mel_basis:
-        mel = librosa_mel_fn(sampling_rate, n_fft, num_mels, fmin, fmax)
+        mel = librosa_mel_fn(sr=sampling_rate, n_fft=n_fft, n_mels=num_mels, fmin=fmin, fmax=fmax)
         mel_basis[str(fmax)+'_'+str(y.device)] = torch.from_numpy(mel).float().to(y.device)
         hann_window[str(y.device)] = torch.hann_window(win_size).to(y.device)
 
@@ -166,9 +166,9 @@ def parse_speaker(path, method):
         raise NotImplementedError()
 
 
-class CustomCodeDataset(torch.utils.data.Dataset):
+class CustomCodeDataset(torch.utils.data.IterableDataset):
     def __init__(self, training_files, segment_size, n_fft, num_mels,
-                 hop_size, win_size, sampling_rate,  fmin, fmax, split=True, shuffle=True, n_cache_reuse=1,
+                 hop_size, win_size, sampling_rate,  fmin, fmax, pad=True, split=True, shuffle=True, n_cache_reuse=1,
                  device=None, fmax_loss=None, fine_tuning=False, base_mels_path=None):
         super(CustomCodeDataset).__init__()
         self.data = training_files
@@ -182,6 +182,7 @@ class CustomCodeDataset(torch.utils.data.Dataset):
         self.fmin = fmin
         self.fmax = fmax
         self.fmax_loss = fmax_loss
+        self.pad = pad
         self.cached_wav = None
         self.n_cache_reuse = n_cache_reuse
         self._cache_ref_count = 0
@@ -194,6 +195,7 @@ class CustomCodeDataset(torch.utils.data.Dataset):
 
     def __iter__(self):
         for data in self.data:
+            data = json.loads(data)
             # Audio simple preprocess
             filename = data["audio"]
             if self._cache_ref_count == 0:
