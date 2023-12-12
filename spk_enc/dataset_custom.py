@@ -167,13 +167,14 @@ def parse_speaker(path, method):
 
 
 class CustomCodeDataset(torch.utils.data.IterableDataset):
-    def __init__(self, training_files, segment_size, n_fft, num_mels,
+    def __init__(self, training_files, segment_size, code_hop_size, n_fft, num_mels,
                  hop_size, win_size, sampling_rate,  fmin, fmax, pad=None, split=True, shuffle=True, n_cache_reuse=1,
                  device=None, fmax_loss=None, fine_tuning=False, base_mels_path=None):
         super(CustomCodeDataset).__init__()
         self.data = training_files
         self.segment_size = segment_size
         self.sampling_rate = sampling_rate
+        self.code_hop_size = code_hop_size
         self.split = split
         self.n_fft = n_fft
         self.num_mels = num_mels
@@ -220,6 +221,7 @@ class CustomCodeDataset(torch.utils.data.IterableDataset):
             data = json.loads(data)
             # Audio simple preprocess
             filename = data["audio"]
+            unit = np.array(data["unit"])   # Unit loading from file
             if self._cache_ref_count == 0:
                 audio, sampling_rate = load_audio(filename)
                 if sampling_rate != self.sampling_rate:
@@ -239,22 +241,26 @@ class CustomCodeDataset(torch.utils.data.IterableDataset):
                 audio = self.cached_wav
                 self._cache_ref_count -= 1
 
+            code_length = min(audio.shape[0] // self.code_hop_size, unit.shape[0])
+            unit = unit[:code_length]
+            audio = audio[:code_length * self.code_hop_size]
+            
+            assert audio.shape[0] // self.code_hop_size == unit.shape[0], "Code audio mismatch"
+            
+            while audio.shape[0] < self.segment_size:
+                audio = np.hstack([audio, audio])
+                unit = np.hstack([unit, unit])
+
             audio = torch.FloatTensor(audio)
             audio = audio.unsqueeze(0)
 
             assert audio.size(1) >= self.segment_size, "Padding not supported!!"
+            audio, unit = self._sample_interval([audio, unit])
             
             mel_loss = mel_spectrogram(audio, self.n_fft, self.num_mels,
                                     self.sampling_rate, self.hop_size, self.win_size, self.fmin, self.fmax_loss,
                                     center=False)
             
-            # Unit loading from file
-            unit = np.array(data["unit"])
-            print(audio.shape)
-            print(len(unit))
-            audio, unit = self._sample_interval([audio, unit])
-            print(audio.shape)
-            print(len(unit))
             feats = {
                 "code": unit.squeeze()
             }
