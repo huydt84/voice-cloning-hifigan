@@ -114,10 +114,10 @@ def train(a, h):
             start_b = time.time()
             
             x, y, _, y_mel = batch
-            y = torch.autograd.Variable(y.to(device, non_blocking=False))
-            y_mel = torch.autograd.Variable(y_mel.to(device, non_blocking=False))
+            y = torch.tensor(y, requires_grad=True).to(device)
+            y_mel = torch.tensor(y_mel, requires_grad=True).to(device)
             y = y.unsqueeze(1)
-            x = {k: torch.autograd.Variable(v.to(device, non_blocking=False)) for k, v in x.items()}
+            x = {k: torch.tensor(v, requires_grad=True).to(device) for k, v in x.items()}
             # x["code"] = torch.Tensor(x["code"])
 
             y_g_hat = generator(**x)
