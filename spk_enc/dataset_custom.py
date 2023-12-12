@@ -267,6 +267,7 @@ class CustomCodeDataset(torch.utils.data.IterableDataset):
             
             # Language loading from file
             feats["language"] = data["language"]
+            print("data: ", feats["language"])
             
             # Speaker embedding path loading from file
             embed_path = data["embed"]

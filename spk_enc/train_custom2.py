@@ -86,14 +86,14 @@ def train(a, h):
     
     training_list, validation_list = get_dataset_list(h.training_metadata)
     print(training_list[0])
-    trainset = CustomCodeDataset(training_list, h.segment_size, h.n_fft, h.num_mels, h.hop_size,
+    trainset = CustomCodeDataset(training_list, h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
                            h.win_size, h.sampling_rate, h.fmin, h.fmax, n_cache_reuse=0, 
                            fmax_loss=h.fmax_for_loss, device=device)
 
     train_loader = DataLoader(trainset, num_workers=0, shuffle=False,
                               batch_size=h.batch_size, pin_memory=True, drop_last=True)
 
-    validset = CustomCodeDataset(validation_list, h.segment_size, h.n_fft, h.num_mels, h.hop_size,
+    validset = CustomCodeDataset(validation_list, h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
                             h.win_size, h.sampling_rate, h.fmin, h.fmax, False, n_cache_reuse=0,
                             fmax_loss=h.fmax_for_loss, device=device)
     validation_loader = DataLoader(validset, num_workers=0, shuffle=False, sampler=None,

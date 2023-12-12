@@ -30,10 +30,12 @@ class Vocoder(nn.Module):
         x = {
             "code": torch.LongTensor(code).view(1, -1),
         }
-        lang_idx = self.lang_spkr_idx_map["multilingual"][lang]
+        print(self.lang_spkr_idx_map)
+        print(lang)
+        lang_idx = self.lang_spkr_idx_map[lang]
         
         if isinstance(self.code_generator, CodeGenerator):
-            spkr_list = self.lang_spkr_idx_map["multispkr"][lang]
+            spkr_list = self.lang_spkr_idx_map[lang]
             if not spkr:
                 spkr = -1
             spkr = spkr_list[0] if spkr == -1 else spkr
