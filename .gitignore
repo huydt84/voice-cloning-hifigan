@@ -164,3 +164,4 @@ cython_debug/
 \nsaved_models/
 saved_models/
 SV2TTS
+checkpoints/

@@ -187,6 +187,9 @@ class CustomCodeDataset(torch.utils.data.Dataset):
         self.device = device
         self.fine_tuning = fine_tuning
         self.base_mels_path = base_mels_path
+        
+    def __len__(self):
+        return len(self.data)
 
     def __iter__(self):
         for data in self.data:
