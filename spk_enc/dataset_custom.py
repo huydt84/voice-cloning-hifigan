@@ -27,6 +27,45 @@ from typing import List
 
 MAX_WAV_VALUE = 32768.0
 
+LANGUAGE_CODE = {
+    "arb": 0,
+    "ben": 1,
+    "cat": 2,
+    "ces": 3,
+    "cmn": 4,
+    "cym": 5,
+    "dan": 6,
+    "deu": 7,
+    "eng": 8,
+    "est": 9,
+    "fin": 10,
+    "fra": 11,
+    "hin": 12,
+    "ind": 13,
+    "ita": 14,
+    "jpn": 15,
+    "kor": 16,
+    "mlt": 17,
+    "nld": 18,
+    "pes": 19,
+    "pol": 20,
+    "por": 21,
+    "ron": 22,
+    "rus": 23,
+    "slk": 24,
+    "spa": 25,
+    "swe": 26,
+    "swh": 27,
+    "tel": 28,
+    "tgl": 29,
+    "tha": 30,
+    "tur": 31,
+    "ukr": 32,
+    "urd": 33,
+    "uzn": 34,
+    "vie": 35
+}
+
 def load_wav(full_path):
     sampling_rate, data = read(full_path)
     return data, sampling_rate
@@ -266,8 +305,7 @@ class CustomCodeDataset(torch.utils.data.IterableDataset):
             }
             
             # Language loading from file
-            feats["language"] = data["language"]
-            print("data: ", feats["language"])
+            feats["lang"] = LANGUAGE_CODE.get(data["language"], None)
             
             # Speaker embedding path loading from file
             embed_path = data["embed"]

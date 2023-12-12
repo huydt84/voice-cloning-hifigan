@@ -197,7 +197,7 @@ class CustomCodeGenerator(Generator):
         signal = signal.view(bsz, channels, max_frames)
         return signal
 
-    def forward(self, sample: Dict[str, Any], dur_prediction: bool) -> Tensor:  # type: ignore
+    def forward(self, sample: Dict[str, Any], dur_prediction: bool = True) -> Tensor:  # type: ignore
         x = sample["code"].clone().to(device=self.dict.weight.device)
         x = self.dict(x).transpose(1, 2)
 

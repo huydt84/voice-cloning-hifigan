@@ -116,7 +116,7 @@ def train(a, h):
             y = torch.autograd.Variable(y.to(device, non_blocking=False))
             y_mel = torch.autograd.Variable(y_mel.to(device, non_blocking=False))
             y = y.unsqueeze(1)
-            # x = {k: torch.autograd.Variable(v.to(device, non_blocking=False)) for k, v in x.items()}
+            x = {k: torch.autograd.Variable(v.to(device, non_blocking=False)) for k, v in x.items()}
             # x["code"] = torch.Tensor(x["code"])
 
             y_g_hat = generator(code=x["code"], lang=x["language"], spkr=x["spkr"])
