@@ -198,7 +198,7 @@ class CustomCodeGenerator(Generator):
         return signal
 
     def forward(self, sample: Dict[str, Any], dur_prediction: bool = True) -> Tensor:  # type: ignore
-        x = sample["code"].clone().to(device=self.dict.weight.device)
+        x = sample["code"].clone()
         x = self.dict(x).transpose(1, 2)
 
         if self.dur_predictor and dur_prediction:
@@ -208,15 +208,20 @@ class CustomCodeGenerator(Generator):
                 torch.round((torch.exp(log_dur_pred) - 1)).long(), min=1
             )
             # B x C x T
-            x = torch.repeat_interleave(x, dur_out.view(-1), dim=2)
+            repeat_interleaved_x = []
+            for i in range(x.size(0)):
+                repeat_interleaved_x.append(torch.repeat_interleave(x[i].unsqueeze(0), dur_out[i].view(-1), dim=2))
+            x = torch.cat(repeat_interleaved_x)
 
         # spkr = self.spkr(sample["spkr"].to(self.spkr.weight.device)).transpose(1, 2)
+        upsampled_spkr = []
+        upsampled_lang = []
         spkr = sample["spkr"].transpose(1, 2)
-        spkr = self._upsample(spkr, x.shape[-1])
+        lang = self.lang(sample["lang"]).transpose(1, 2)
+        for i in range(x.size(0)):
+            upsampled_spkr.append(self._upsample(spkr[i], x.shape[-1]))
+            upsampled_lang.append(self._upsample(lang[i], x.shape[-1]))
         x = torch.cat([x, spkr], dim=1)  
-
-        lang = self.lang(sample["lang"].to(self.lang.weight.device)).transpose(1, 2)
-        lang = self._upsample(lang, x.shape[-1])
         x = torch.cat([lang, x], dim=1)
 
         return super().forward(x)
