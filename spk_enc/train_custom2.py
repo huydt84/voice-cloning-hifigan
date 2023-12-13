@@ -119,8 +119,9 @@ def train(a, h):
             y = y.unsqueeze(1)
             # x = {k: torch.tensor(v).to(device) for k, v in x.items()}
             x["code"] = torch.LongTensor(x["code"])
-            x["spkr"] = torch.Tensor(x["spkr"])
-            x["lang"] = torch.Tensor(x["lang"])
+            x["spkr"] = torch.Tensor(x["spkr"]).unsqueeze(-1)
+            print(x["spkr"].shape)
+            x["lang"] = torch.Tensor(x["lang"]).unsqueeze(-1)
             x = {k: v.to(device) for k, v in x.items()}
 
             y_g_hat = generator(x)

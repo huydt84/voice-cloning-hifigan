@@ -25,7 +25,7 @@ class Vocoder(nn.Module):
         code: List[int],
         lang: str,
         spkr,
-        dur_prediction: bool = True,
+        dur_prediction: bool = False,
     ) -> Tensor:
         x = {
             "code": torch.LongTensor(code).view(1, -1),

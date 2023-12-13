@@ -114,7 +114,7 @@ class CodeGenerator(Generator):
         signal = signal.view(bsz, channels, max_frames)
         return signal
 
-    def forward(self, sample: Dict[str, Any], dur_prediction: bool) -> Tensor:  # type: ignore
+    def forward(self, sample: Dict[str, Any], dur_prediction: bool = False) -> Tensor:  # type: ignore
         
         x = sample["code"].clone().to(device=self.dict.weight.device)
         x = self.dict(x).transpose(1, 2)
@@ -198,7 +198,7 @@ class CustomCodeGenerator(Generator):
         signal = signal.view(bsz, channels, max_frames)
         return signal
 
-    def forward(self, sample: Dict[str, Any], dur_prediction: bool = True) -> Tensor:  # type: ignore
+    def forward(self, sample: Dict[str, Any], dur_prediction: bool = False) -> Tensor:  # type: ignore
         # print(sample)
         units = sample["code"]
         print(units.shape)
@@ -223,12 +223,23 @@ class CustomCodeGenerator(Generator):
         # spkr = self.spkr(sample["spkr"].to(self.spkr.weight.device)).transpose(1, 2)
         upsampled_spkr = []
         upsampled_lang = []
-        spkr = self.spkr(sample["spkr"]).transpose(1, 2)
+        # spkr = self.spkr(sample["spkr"]).transpose(1, 2)
         # spkr = sample["spkr"].transpose(1, 2)
+        
         lang = self.lang(sample["lang"]).transpose(1, 2)
+        print("before up")
+        print(x.shape)
+        print(sample["spkr"].shape)
+        print(lang.shape)
         for i in range(x.size(0)):
-            upsampled_spkr.append(self._upsample(spkr[i], x.shape[-1]))
+            upsampled_spkr.append(self._upsample(sample["spkr"][i], x.shape[-1]))
             upsampled_lang.append(self._upsample(lang[i], x.shape[-1]))
+        spkr = torch.cat(upsampled_spkr, dim=1).transpose(0, 1)
+        lang = torch.cat(upsampled_lang, dim=1).transpose(0, 1)
+        print("before cat:")
+        print(x.shape)
+        print(spkr.shape)
+        print(lang.shape)
         x = torch.cat([x, spkr], dim=1)  
         x = torch.cat([lang, x], dim=1)
 
