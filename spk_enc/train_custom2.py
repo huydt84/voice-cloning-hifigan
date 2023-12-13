@@ -43,7 +43,6 @@ def train(a, h):
     mpd = MultiPeriodDiscriminator().to(device)
     msd = MultiScaleDiscriminator().to(device)
 
-    print(generator)
     os.makedirs(a.checkpoint_path, exist_ok=True)
     print("checkpoints directory : ", a.checkpoint_path)
 
