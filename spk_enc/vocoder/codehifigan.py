@@ -115,6 +115,7 @@ class CodeGenerator(Generator):
         return signal
 
     def forward(self, sample: Dict[str, Any], dur_prediction: bool) -> Tensor:  # type: ignore
+        
         x = sample["code"].clone().to(device=self.dict.weight.device)
         x = self.dict(x).transpose(1, 2)
 
@@ -198,11 +199,14 @@ class CustomCodeGenerator(Generator):
         return signal
 
     def forward(self, sample: Dict[str, Any], dur_prediction: bool = True) -> Tensor:  # type: ignore
-        x = sample["code"].clone()
-        x = self.dict(x).transpose(1, 2)
+        # print(sample)
+        units = sample["code"]
+        print(units.shape)
+        # x = self.dict(sample["code"]).clone()
+        x = self.dict(units).transpose(1, 2)
+        print(x.shape)
 
         if self.dur_predictor and dur_prediction:
-            # assert x.size(0) == 1, "only support single sample"
             log_dur_pred = self.dur_predictor(x.transpose(1, 2))
             dur_out = torch.clamp(
                 torch.round((torch.exp(log_dur_pred) - 1)).long(), min=1
@@ -210,13 +214,17 @@ class CustomCodeGenerator(Generator):
             # B x C x T
             repeat_interleaved_x = []
             for i in range(x.size(0)):
+                print(x[i].unsqueeze(0).shape)
+                print(dur_out[i].view(-1).shape)
+                print(torch.repeat_interleave(x[i].unsqueeze(0), dur_out[i].view(-1), dim=2).shape)
                 repeat_interleaved_x.append(torch.repeat_interleave(x[i].unsqueeze(0), dur_out[i].view(-1), dim=2))
             x = torch.cat(repeat_interleaved_x)
 
         # spkr = self.spkr(sample["spkr"].to(self.spkr.weight.device)).transpose(1, 2)
         upsampled_spkr = []
         upsampled_lang = []
-        spkr = sample["spkr"].transpose(1, 2)
+        spkr = self.spkr(sample["spkr"]).transpose(1, 2)
+        # spkr = sample["spkr"].transpose(1, 2)
         lang = self.lang(sample["lang"]).transpose(1, 2)
         for i in range(x.size(0)):
             upsampled_spkr.append(self._upsample(spkr[i], x.shape[-1]))

@@ -117,8 +117,11 @@ def train(a, h):
             y = torch.tensor(y).to(device)
             y_mel = torch.tensor(y_mel).to(device)
             y = y.unsqueeze(1)
-            x = {k: torch.tensor(v).to(device) for k, v in x.items()}
-            # x["code"] = torch.Tensor(x["code"])
+            # x = {k: torch.tensor(v).to(device) for k, v in x.items()}
+            x["code"] = torch.LongTensor(x["code"])
+            x["spkr"] = torch.Tensor(x["spkr"])
+            x["lang"] = torch.Tensor(x["lang"])
+            x = {k: v.to(device) for k, v in x.items()}
 
             y_g_hat = generator(x)
             if h.get('f0_vq_params', None) or h.get('code_vq_params', None):
