@@ -114,13 +114,13 @@ def train(a, h):
             start_b = time.time()
             
             x, y, _, y_mel = batch
-            y = torch.tensor(y, requires_grad=True).to(device)
-            y_mel = torch.tensor(y_mel, requires_grad=True).to(device)
+            y = torch.tensor(y).to(device)
+            y_mel = torch.tensor(y_mel).to(device)
             y = y.unsqueeze(1)
-            x = {k: torch.tensor(v, requires_grad=True).to(device) for k, v in x.items()}
+            x = {k: torch.tensor(v).to(device) for k, v in x.items()}
             # x["code"] = torch.Tensor(x["code"])
 
-            y_g_hat = generator(**x)
+            y_g_hat = generator(x)
             if h.get('f0_vq_params', None) or h.get('code_vq_params', None):
                 y_g_hat, commit_losses, metrics = y_g_hat
 
@@ -219,7 +219,7 @@ def train(a, h):
                         x, y, _, y_mel = batch
                         x = {k: v.to(device, non_blocking=False) for k, v in x.items()}
 
-                        y_g_hat = generator(**x)
+                        y_g_hat = generator(x)
                         if h.get('f0_vq_params', None) or h.get('code_vq_params', None):
                             y_g_hat, commit_losses, _ = y_g_hat
 

@@ -202,7 +202,7 @@ class CustomCodeGenerator(Generator):
         x = self.dict(x).transpose(1, 2)
 
         if self.dur_predictor and dur_prediction:
-            assert x.size(0) == 1, "only support single sample"
+            # assert x.size(0) == 1, "only support single sample"
             log_dur_pred = self.dur_predictor(x.transpose(1, 2))
             dur_out = torch.clamp(
                 torch.round((torch.exp(log_dur_pred) - 1)).long(), min=1
