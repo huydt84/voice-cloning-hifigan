@@ -182,7 +182,7 @@ def get_dataset_list(metadata_path: str):
     with open(metadata_path, "r") as f:
         metadata = f.readlines()
     generator = torch.Generator().manual_seed(42)
-    train_dataset, val_dataset = random_split(metadata, [0.95, 0.05], generator=generator)
+    train_dataset, val_dataset = random_split(metadata, [0.98, 0.02], generator=generator)
     return (train_dataset, val_dataset)   
         
 

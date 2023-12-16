@@ -3,7 +3,8 @@
 
     "resblock": "1",
     "num_gpus": 1,
-    "batch_size": 16,
+    "batch_size": 8,
+    "val_batch_size": 23,
     "learning_rate": 0.0002,
     "adam_b1": 0.8,
     "adam_b2": 0.99,

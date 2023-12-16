@@ -20,8 +20,8 @@ import torch.nn as nn
 import torch.nn.functional as F
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DistributedSampler, DataLoader
-from dataset import CodeDataset, mel_spectrogram, get_dataset_filelist
-from dataset_custom import get_dataset_list, CustomCodeDataset
+# from dataset import CodeDataset, mel_spectrogram, get_dataset_filelist
+from dataset_custom import get_dataset_list, CustomCodeDataset, mel_spectrogram
 from vocoder import  Vocoder, init_vocoder
 from models import MultiPeriodDiscriminator, MultiScaleDiscriminator, feature_loss, generator_loss, \
     discriminator_loss
@@ -73,19 +73,10 @@ def train(a, h):
 
     scheduler_g = torch.optim.lr_scheduler.ExponentialLR(optim_g, gamma=h.lr_decay, last_epoch=last_epoch)
     scheduler_d = torch.optim.lr_scheduler.ExponentialLR(optim_d, gamma=h.lr_decay, last_epoch=last_epoch)
-
-    # training_filelist, validation_filelist = get_dataset_filelist(h)
-
-    # trainset = CodeDataset(training_filelist, h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
-    #                        h.win_size, h.sampling_rate, h.fmin, h.fmax, n_cache_reuse=0, fmax_loss=h.fmax_for_loss,
-    #                        device=device, f0=h.get('f0', None), multispkr=h.get('multispkr', None),
-    #                        f0_stats=h.get('f0_stats', None),
-    #                        f0_normalize=h.get('f0_normalize', False), f0_feats=h.get('f0_feats', False),
-    #                        f0_median=h.get('f0_median', False), f0_interp=h.get('f0_interp', False),
-    #                        vqvae=h.get('code_vq_params', False))
     
     training_list, validation_list = get_dataset_list(h.training_metadata)
-    print(training_list[0])
+    print(f"Number of training files: {len(training_list)}")
+    print(f"Number of validation files: {len(validation_list)}")
     trainset = CustomCodeDataset(training_list, h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
                            h.win_size, h.sampling_rate, h.fmin, h.fmax, n_cache_reuse=0, 
                            fmax_loss=h.fmax_for_loss, device=device)
@@ -97,29 +88,26 @@ def train(a, h):
                             h.win_size, h.sampling_rate, h.fmin, h.fmax, False, n_cache_reuse=0,
                             fmax_loss=h.fmax_for_loss, device=device)
     validation_loader = DataLoader(validset, num_workers=0, shuffle=False, sampler=None,
-                                    batch_size=h.batch_size, pin_memory=True, drop_last=True)
+                                    batch_size=h.val_batch_size, pin_memory=True, drop_last=True)
 
     sw = SummaryWriter(os.path.join(a.checkpoint_path, 'logs'))
 
-    generator.train()
-    mpd.train()
-    msd.train()
     for epoch in range(max(0, last_epoch), a.training_epochs):
         start = time.time()
         print("Epoch: {}".format(epoch + 1))
 
         for i, batch in enumerate(train_loader):
-            print(i)
+            generator.train()
+            mpd.train()
+            msd.train()
             start_b = time.time()
             
             x, y, _, y_mel = batch
-            y = torch.tensor(y).to(device)
-            y_mel = torch.tensor(y_mel).to(device)
+            y = y.to(device)
+            y_mel = y_mel.to(device)
             y = y.unsqueeze(1)
-            # x = {k: torch.tensor(v).to(device) for k, v in x.items()}
             x["code"] = torch.LongTensor(x["code"])
             x["spkr"] = torch.Tensor(x["spkr"]).unsqueeze(-1)
-            print(x["spkr"].shape)
             x["lang"] = torch.Tensor(x["lang"]).unsqueeze(-1)
             x = {k: v.to(device) for k, v in x.items()}
 
@@ -190,7 +178,7 @@ def train(a, h):
             if steps % a.checkpoint_interval == 0 and steps != 0:
                 checkpoint_path = "{}/g_{:08d}".format(a.checkpoint_path, steps)
                 save_checkpoint(checkpoint_path,
-                                {'generator': (generator.module.code_generator if h.num_gpus > 1 else generator.code_generator).state_dict()})
+                                {'generator': generator.state_dict()})
                 checkpoint_path = "{}/do_{:08d}".format(a.checkpoint_path, steps)
                 save_checkpoint(checkpoint_path, {'mpd': (mpd.module if h.num_gpus > 1 else mpd).state_dict(),
                                                     'msd': (msd.module if h.num_gpus > 1 else msd).state_dict(),
@@ -198,7 +186,7 @@ def train(a, h):
                                                     'steps': steps, 'epoch': epoch})
 
             # Tensorboard summary logging
-            if steps % a.summary_interval == 0:
+            if steps % a.summary_interval == 0 and steps != 0:
                 sw.add_scalar("training/gen_loss_total", loss_gen_all, steps)
                 sw.add_scalar("training/mel_spec_error", mel_error, steps)
                 if h.get('f0_vq_params', None):
@@ -213,14 +201,22 @@ def train(a, h):
                     sw.add_scalar("training/code_usage", code_metrics['usage'].item(), steps)
 
             # Validation
-            if steps % a.validation_interval == 0:  # and steps != 0:
+            if steps % a.validation_interval == 0 and steps != 0:
                 generator.eval()
                 torch.cuda.empty_cache()
                 val_err_tot = 0
+                start_v = time.time()
                 with torch.no_grad():
                     for j, batch in enumerate(validation_loader):
                         x, y, _, y_mel = batch
-                        x = {k: v.to(device, non_blocking=False) for k, v in x.items()}
+                        y = y.to(device)
+                        y_mel = y_mel.to(device)
+                        y = y.unsqueeze(1)
+                        
+                        x["code"] = torch.LongTensor(x["code"])
+                        x["spkr"] = torch.Tensor(x["spkr"]).unsqueeze(-1)
+                        x["lang"] = torch.Tensor(x["lang"]).unsqueeze(-1)
+                        x = {k: v.to(device) for k, v in x.items()}
 
                         y_g_hat = generator(x)
                         if h.get('f0_vq_params', None) or h.get('code_vq_params', None):
@@ -255,6 +251,10 @@ def train(a, h):
                         sw.add_scalar("validation/commit_error", f0_commit_loss, steps)
                     if h.get('code_vq_params', None):
                         sw.add_scalar("validation/code_commit_error", code_commit_loss, steps)
+                print(
+                    'Steps : {:d}, Validation Mel-Spec Error : {:4.3f}, s/b : {:4.3f}'.format(steps,
+                                                                                                      val_err,
+                                                                                                      time.time() - start_v))
                 generator.train()
 
             steps += 1
@@ -280,10 +280,10 @@ def main():
     parser.add_argument('--model_config', default='spk_enc/vocoder/model_config.json')
     parser.add_argument('--training_epochs', default=2000, type=int)
     parser.add_argument('--training_steps', default=400000, type=int)
-    parser.add_argument('--stdout_interval', default=5, type=int)
-    parser.add_argument('--checkpoint_interval', default=10000, type=int)
+    parser.add_argument('--stdout_interval', default=2, type=int)
+    parser.add_argument('--checkpoint_interval', default=100, type=int)
     parser.add_argument('--summary_interval', default=100, type=int)
-    parser.add_argument('--validation_interval', default=1000, type=int)
+    parser.add_argument('--validation_interval', default=100, type=int)
     parser.add_argument('--fine_tuning', default=False, type=bool)
 
     a = parser.parse_args()
