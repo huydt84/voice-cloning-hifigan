@@ -11,11 +11,11 @@ import torch
 import torch.nn as nn
 from torch import Tensor
 
-from vocoder.codehifigan import CodeGenerator, CustomCodeGenerator
+from vocoder.codehifigan import CodeGenerator, CustomCodeGenerator, CustomExpressiveCodeGenerator
 
 
 class Vocoder(nn.Module):
-    def __init__(self, code_generator: Union[CustomCodeGenerator, CodeGenerator], lang_spkr_idx_map: dict):
+    def __init__(self, code_generator: Union[CustomCodeGenerator, CodeGenerator, CustomExpressiveCodeGenerator], lang_spkr_idx_map: dict):
         super(Vocoder, self).__init__()
         self.code_generator = code_generator
         self.lang_spkr_idx_map = lang_spkr_idx_map
@@ -89,6 +89,6 @@ def init_vocoder(model_config_path, lang_spkr_idx_map=LANGUAGE_CODE):
         data = f.read()
 
     json_config = json.loads(data)
-    code_generator = CustomCodeGenerator(**json_config)
+    code_generator = CustomExpressiveCodeGenerator(**json_config)
     
     return Vocoder(code_generator, lang_spkr_idx_map)
