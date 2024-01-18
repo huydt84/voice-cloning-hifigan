@@ -165,3 +165,4 @@ cython_debug/
 saved_models/
 SV2TTS
 checkpoints/
+wandb/
