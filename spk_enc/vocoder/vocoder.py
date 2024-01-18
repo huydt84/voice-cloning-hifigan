@@ -89,6 +89,6 @@ def init_vocoder(model_config_path, lang_spkr_idx_map=LANGUAGE_CODE):
         data = f.read()
 
     json_config = json.loads(data)
-    code_generator = CustomExpressiveCodeGenerator(**json_config)
+    code_generator = CustomCodeGenerator(**json_config)
     
     return Vocoder(code_generator, lang_spkr_idx_map)
