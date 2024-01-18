@@ -1,0 +1,65 @@
+{
+    "os": "Linux-6.1.58+-x86_64-with-glibc2.35",
+    "python": "3.10.12",
+    "heartbeatAt": "2024-01-06T11:35:15.771532",
+    "startedAt": "2024-01-06T11:35:06.581159",
+    "docker": null,
+    "cuda": null,
+    "args": [
+        "--checkpoint_path",
+        "checkpoints/3",
+        "--model_config",
+        "/content/drive/MyDrive/voice-cloning-hifigan/spk_enc/vocoder/model_config.json",
+        "--config",
+        "/content/drive/MyDrive/voice-cloning-hifigan/spk_enc/vocoder/train_config.json"
+    ],
+    "state": "running",
+    "program": "/content/drive/MyDrive/voice-cloning-hifigan/spk_enc/train_custom2.py",
+    "codePathLocal": "spk_enc/train_custom2.py",
+    "codePath": "spk_enc/train_custom2.py",
+    "git": {
+        "remote": "https://github.com/huydt84/voice-cloning-hifigan.git",
+        "commit": "24434a8bb03e243c18023c79a4107dd72afe9c22"
+    },
+    "email": null,
+    "root": "/content/drive/MyDrive/voice-cloning-hifigan",
+    "host": "1b492c2f8830",
+    "username": "root",
+    "executable": "/usr/bin/python3",
+    "cpu_count": 1,
+    "cpu_count_logical": 2,
+    "cpu_freq": {
+        "current": 2000.158,
+        "min": 0.0,
+        "max": 0.0
+    },
+    "cpu_freq_per_core": [
+        {
+            "current": 2000.158,
+            "min": 0.0,
+            "max": 0.0
+        },
+        {
+            "current": 2000.158,
+            "min": 0.0,
+            "max": 0.0
+        }
+    ],
+    "disk": {
+        "/": {
+            "total": 78.1898422241211,
+            "used": 32.493194580078125
+        }
+    },
+    "gpu": "Tesla T4",
+    "gpu_count": 1,
+    "gpu_devices": [
+        {
+            "name": "Tesla T4",
+            "memory_total": 16106127360
+        }
+    ],
+    "memory": {
+        "total": 12.674789428710938
+    }
+}

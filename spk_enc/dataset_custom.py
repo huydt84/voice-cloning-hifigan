@@ -20,6 +20,7 @@ import torch.utils.data
 from torch.utils.data import random_split
 from librosa.filters import mel as librosa_mel_fn
 from librosa.util import normalize
+from sklearn.model_selection import train_test_split
 
 from scipy.io.wavfile import read
 import json
@@ -181,8 +182,9 @@ def parse_manifest(manifest):
 def get_dataset_list(metadata_path: str):
     with open(metadata_path, "r") as f:
         metadata = f.readlines()
-    generator = torch.Generator().manual_seed(42)
-    train_dataset, val_dataset = random_split(metadata, [0.98, 0.02], generator=generator)
+    # generator = torch.Generator().manual_seed(42)
+    # train_dataset, val_dataset = random_split(metadata, [0.98, 0.02], generator=generator)
+    train_dataset, val_dataset = train_test_split(metadata, test_size=0.02, random_state=42)
     return (train_dataset, val_dataset)   
         
 

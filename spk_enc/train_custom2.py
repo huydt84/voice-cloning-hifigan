@@ -30,6 +30,22 @@ from utils_train import plot_spectrogram, scan_checkpoint, load_checkpoint, \
     
 from typing import Callable, Dict, List, Optional, Tuple, Union
 
+import wandb
+
+# wandb_id = wandb.util.generate_id()
+# print(wandb_id)
+wandb.init(
+    # set the wandb project where this run will be logged
+    project="vc-hifigan", 
+    id="9wj6t3m1",
+    resume="must",
+    
+    # track hyperparameters and run metadata
+    config={
+      "steps": 200,
+    }
+)
+
 torch.backends.cudnn.benchmark = True
 
 def train(a, h):
@@ -55,6 +71,7 @@ def train(a, h):
         state_dict_do = None
         last_epoch = -1
     else:
+        print(f"Generator checkpoint: {cp_g}")
         state_dict_g = load_checkpoint(cp_g, device)
         state_dict_do = load_checkpoint(cp_do, device)
         generator.load_state_dict(state_dict_g['generator'])
@@ -77,7 +94,7 @@ def train(a, h):
     training_list, validation_list = get_dataset_list(h.training_metadata)
     print(f"Number of training files: {len(training_list)}")
     print(f"Number of validation files: {len(validation_list)}")
-    trainset = CustomCodeDataset(training_list, h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
+    trainset = CustomCodeDataset(training_list[78400:], h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
                            h.win_size, h.sampling_rate, h.fmin, h.fmax, n_cache_reuse=0, 
                            fmax_loss=h.fmax_for_loss, device=device)
 
@@ -167,7 +184,7 @@ def train(a, h):
             if steps % a.stdout_interval == 0:
                 with torch.no_grad():
                     mel_error = F.l1_loss(y_mel, y_g_hat_mel).item()
-
+                wandb.log({"loss_gen_all1": loss_gen_all, "mel_error1": mel_error})
                 print(
                     'Steps : {:d}, Gen Loss Total : {:4.3f}, Mel-Spec. Error : {:4.3f}, s/b : {:4.3f}'.format(steps,
                                                                                                                 loss_gen_all,
@@ -251,6 +268,7 @@ def train(a, h):
                         sw.add_scalar("validation/commit_error", f0_commit_loss, steps)
                     if h.get('code_vq_params', None):
                         sw.add_scalar("validation/code_commit_error", code_commit_loss, steps)
+                wandb.log({"valid_mel_error1": val_err})
                 print(
                     'Steps : {:d}, Validation Mel-Spec Error : {:4.3f}, s/b : {:4.3f}'.format(steps,
                                                                                                       val_err,
@@ -268,6 +286,8 @@ def train(a, h):
 
     print('Finished training')
 
+    wandb.finish()
+
 
 def main():
     print('Initializing Training Process..')
@@ -278,8 +298,8 @@ def main():
     parser.add_argument('--checkpoint_path', default='cp_hifigan')
     parser.add_argument('--config', default='spk_enc/vocoder/train_config.json')
     parser.add_argument('--model_config', default='spk_enc/vocoder/model_config.json')
-    parser.add_argument('--training_epochs', default=2000, type=int)
-    parser.add_argument('--training_steps', default=400000, type=int)
+    parser.add_argument('--training_epochs', default=2, type=int)
+    parser.add_argument('--training_steps', default=5406, type=int)
     parser.add_argument('--stdout_interval', default=2, type=int)
     parser.add_argument('--checkpoint_interval', default=100, type=int)
     parser.add_argument('--summary_interval', default=100, type=int)
