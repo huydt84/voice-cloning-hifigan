@@ -172,7 +172,7 @@ class CustomCodeGenerator(Generator):
             model_in_dim,
         )
         self.dict = nn.Embedding(num_embeddings, embedding_dim)
-        self.spkr = nn.Embedding(num_spkrs, spkr_embedding_dim)
+        self.spkr = nn.Linear(spkr_embedding_dim, spkr_embedding_dim)
         self.lang = nn.Embedding(num_langs, lang_embedding_dim)
 
         self.dur_predictor = None
@@ -223,9 +223,10 @@ class CustomCodeGenerator(Generator):
         upsampled_spkr = []
         upsampled_lang = []
         
+        spkr = self.spkr(sample["spkr"]).unsqueeze(-1)
         lang = self.lang(sample["lang"]).transpose(1, 2)
         for i in range(x.size(0)):
-            upsampled_spkr.append(self._upsample(sample["spkr"][i], x.shape[-1]))
+            upsampled_spkr.append(self._upsample(spkr[i], x.shape[-1]))
             upsampled_lang.append(self._upsample(lang[i], x.shape[-1]))
         spkr = torch.cat(upsampled_spkr, dim=1).transpose(0, 1)
         lang = torch.cat(upsampled_lang, dim=1).transpose(0, 1)
