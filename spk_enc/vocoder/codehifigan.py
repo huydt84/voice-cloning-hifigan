@@ -172,8 +172,11 @@ class CustomCodeGenerator(Generator):
             model_in_dim,
         )
         self.dict = nn.Embedding(num_embeddings, embedding_dim)
-        self.spkr = nn.Linear(spkr_embedding_dim, spkr_embedding_dim)
-        self.lang = nn.Embedding(num_langs, lang_embedding_dim)
+        self.spkr1 = nn.Linear(spkr_embedding_dim, spkr_embedding_dim*2)
+        self.spkr2 = nn.Conv1d(spkr_embedding_dim*2, spkr_embedding_dim, kernel_size=3, padding=1)
+        
+        self.lang1 = nn.Embedding(num_langs, lang_embedding_dim*2)
+        self.lang2 = nn.Conv1d(lang_embedding_dim*2, lang_embedding_dim, kernel_size=3, padding=1)
 
         self.dur_predictor = None
         if dur_predictor_params:
@@ -223,8 +226,12 @@ class CustomCodeGenerator(Generator):
         upsampled_spkr = []
         upsampled_lang = []
         
-        spkr = self.spkr(sample["spkr"]).unsqueeze(-1)
-        lang = self.lang(sample["lang"]).transpose(1, 2)
+        spkr = self.spkr1(sample["spkr"])
+        spkr = spkr.unsqueeze(-1)
+        spkr = self.spkr2(spkr)
+        
+        lang = self.lang1(sample["lang"]).transpose(1, 2)
+        lang = self.lang2(lang)
         for i in range(x.size(0)):
             upsampled_spkr.append(self._upsample(spkr[i], x.shape[-1]))
             upsampled_lang.append(self._upsample(lang[i], x.shape[-1]))
