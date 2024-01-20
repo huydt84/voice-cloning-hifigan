@@ -14,3 +14,4 @@ umap-learn==0.5.2
 visdom
 local-attention
 openai-whisper
+resampy

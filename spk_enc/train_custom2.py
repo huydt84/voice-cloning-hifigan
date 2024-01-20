@@ -37,8 +37,8 @@ import wandb
 wandb.init(
     # set the wandb project where this run will be logged
     project="vc-hifigan", 
-    id="9wj6t3m1",
-    resume="must",
+    # id="9wj6t3m1",
+    resume="allow",
     
     # track hyperparameters and run metadata
     config={
@@ -94,7 +94,7 @@ def train(a, h):
     training_list, validation_list = get_dataset_list(h.training_metadata)
     print(f"Number of training files: {len(training_list)}")
     print(f"Number of validation files: {len(validation_list)}")
-    trainset = CustomCodeDataset(training_list[78400:], h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
+    trainset = CustomCodeDataset(training_list, h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
                            h.win_size, h.sampling_rate, h.fmin, h.fmax, n_cache_reuse=0, 
                            fmax_loss=h.fmax_for_loss, device=device)
 
@@ -102,7 +102,7 @@ def train(a, h):
                               batch_size=h.batch_size, pin_memory=True, drop_last=True)
 
     validset = CustomCodeDataset(validation_list, h.segment_size, h.code_hop_size, h.n_fft, h.num_mels, h.hop_size,
-                            h.win_size, h.sampling_rate, h.fmin, h.fmax, False, n_cache_reuse=0,
+                            h.win_size, h.sampling_rate, h.fmin, h.fmax, n_cache_reuse=0,
                             fmax_loss=h.fmax_for_loss, device=device)
     validation_loader = DataLoader(validset, num_workers=0, shuffle=False, sampler=None,
                                     batch_size=h.val_batch_size, pin_memory=True, drop_last=True)
@@ -231,7 +231,7 @@ def train(a, h):
                         y = y.unsqueeze(1)
                         
                         x["code"] = torch.LongTensor(x["code"])
-                        x["spkr"] = torch.Tensor(x["spkr"]).unsqueeze(-1)
+                        x["spkr"] = torch.Tensor(x["spkr"])
                         x["lang"] = torch.Tensor(x["lang"]).unsqueeze(-1)
                         x = {k: v.to(device) for k, v in x.items()}
 
@@ -299,9 +299,9 @@ def main():
     parser.add_argument('--config', default='spk_enc/vocoder/train_config.json')
     parser.add_argument('--model_config', default='spk_enc/vocoder/model_config.json')
     parser.add_argument('--training_epochs', default=2, type=int)
-    parser.add_argument('--training_steps', default=5406, type=int)
+    parser.add_argument('--training_steps', default=40001, type=int)
     parser.add_argument('--stdout_interval', default=2, type=int)
-    parser.add_argument('--checkpoint_interval', default=100, type=int)
+    parser.add_argument('--checkpoint_interval', default=200, type=int)
     parser.add_argument('--summary_interval', default=100, type=int)
     parser.add_argument('--validation_interval', default=100, type=int)
     parser.add_argument('--fine_tuning', default=False, type=bool)

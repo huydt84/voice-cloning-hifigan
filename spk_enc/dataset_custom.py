@@ -187,7 +187,7 @@ def get_dataset_list(metadata_path: str):
         metadata = f.readlines()
     # generator = torch.Generator().manual_seed(42)
     # train_dataset, val_dataset = random_split(metadata, [0.98, 0.02], generator=generator)
-    train_dataset, val_dataset = train_test_split(metadata, test_size=0.02, random_state=42)
+    train_dataset, val_dataset = train_test_split(metadata, test_size=0.01, random_state=42)
     return (train_dataset, val_dataset)   
         
 
@@ -212,7 +212,7 @@ def parse_speaker(path, method):
 
 class CustomCodeDataset(torch.utils.data.IterableDataset):
     def __init__(self, training_files, segment_size, code_hop_size, n_fft, num_mels,
-                 hop_size, win_size, sampling_rate,  fmin, fmax, pad=1000, split=True, shuffle=True, n_cache_reuse=1,
+                 hop_size, win_size, sampling_rate,  fmin, fmax, pad=500, split=True, shuffle=True, n_cache_reuse=1,
                  device=None, fmax_loss=None, fine_tuning=False, base_mels_path=None):
         super(CustomCodeDataset).__init__()
         self.data = training_files
